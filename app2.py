@@ -18,9 +18,11 @@ def insert_expense(date, category, item, quantity, amount):
     total = quantity * amount
     conn = sqlite3.connect("expenses2.db")
     c = conn.cursor()
-    c.execute("INSERT INTO expenses2 (Date, Category, Item, Quantity, Amount, Total) VALUES (?, ?, ?, ?, ?, ?)", (date, category, item, quantity, amount, total))
+    c.execute("INSERT INTO expenses2 (Date, Category, Item, Quantity, Amount, Total) VALUES (?, ?, ?, ?, ?, ?)", 
+              (date, category, item, quantity, amount, total))
     conn.commit()
     conn.close()
+    st.session_state.data = fetch_expenses()  # Update session state
 
 # Fetch expenses
 def fetch_expenses():
@@ -33,11 +35,16 @@ def fetch_expenses():
 
 # Delete expense
 def delete_expense(expense_id):
-    conn = sqlite3.connect("expenses.db")
+    conn = sqlite3.connect("expenses2.db")
     c = conn.cursor()
-    c.execute("DELETE FROM expenses WHERE id = ?", (expense_id,))
+    c.execute("DELETE FROM expenses2 WHERE id = ?", (expense_id,))
     conn.commit()
     conn.close()
+    st.session_state.data = fetch_expenses()  # Update session state
+
+# Initialize session state
+if "data" not in st.session_state:
+    st.session_state.data = fetch_expenses()
 
 # Main App
 def main():
@@ -61,7 +68,7 @@ def main():
             st.warning("Please enter all details!")
 
     # Fetch and Display data
-    expenses_df = fetch_expenses()
+    expenses_df = st.session_state.data
     if not expenses_df.empty:
         st.subheader("Expenses List")
         st.dataframe(expenses_df)
@@ -103,6 +110,16 @@ def main():
         st.subheader("Download Data")
         csv = expenses_df.to_csv(index=False).encode('utf-8')
         st.download_button("Download CSV", data=csv, file_name="expenses2.csv", mime="text/csv")
+
+    # Reset Data Button
+    if st.button("Reset All Data"):
+        conn = sqlite3.connect("expenses2.db")
+        c = conn.cursor()
+        c.execute("DELETE FROM expenses2")
+        conn.commit()
+        conn.close()
+        st.session_state.data = fetch_expenses()
+        st.success("All Data Reset!")
 
 if __name__ == "__main__":
     main()
